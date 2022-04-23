@@ -5,12 +5,11 @@ import os
 
 class Config:
     """
-    The config class for python-script.
+    The config class for pythontube.
 
     Attributes:
-    - name: the config file name (default: python-script)
+    - name: the config file name (default: pythontube)
     - __location__: the path of the config script
-    - __location__: the path of the project root
     - file_path: the config file path (defaulting to `name` attribute in the
                  project root directory)
     - data: the data of the config file
@@ -20,11 +19,11 @@ class Config:
     - initialize_config(): initialize the config file and return the config dict
     """
 
-    def __init__(self, file_name: str = "python-script") -> None:
+    def __init__(self, file_name: str = "pythontube") -> None:
         self.__location__ = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
         self.file_name = file_name
-        # file_path: the path of the config file (defaulting to python-script.json
+        # file_path: the path of the config file (defaulting to pythontube.json
         # in the project root directory)
         self.file_path = os.path.join(
             self.__location__, self.file_name).removesuffix(".json") + ".json"
@@ -83,10 +82,10 @@ class Config:
         """
         while True:
             print(
-                "\nEnter the output directory path (e.g. /home/user/python-script-output)")
-            print("Default: '<script-location>/python-script-output/'")
+                "\nEnter the output directory path (e.g. /home/user/pythontube-output)")
+            print("Default: '<script-location>/pythontube-output/'")
             output_dir = input(": ") or os.path.join(
-                self.__location__, "python-script-output")
+                self.__location__, "pythontube-output")
 
             # check if user specify a relative path or absolute path
             if os.path.isabs(output_dir):
@@ -110,7 +109,7 @@ class Config:
 
 def main(args=None):
     try:
-        config = Config("python-script")
+        config = Config("pythontube")
         print("==========================")
         print(config.initialize_config())
         print("==========================\n")
