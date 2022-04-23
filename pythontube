@@ -96,7 +96,8 @@ def get_user_inputs(args: list | None):
             dt = 1
             print(f": {dt}")
         else:
-            dt = int(input(": "))
+            dt_input = input(": ")
+            dt = int(dt_input) if dt_input else 1
         if dt == 1:
             is_audio_only = False
         elif dt == 2:
@@ -118,7 +119,8 @@ def get_user_inputs(args: list | None):
             dq = 1
             print(f": {dq}")
         else:
-            dq = int(input(": "))
+            dq_input = input(": ")
+            dq = int(dq_input) if dq_input else 60
         if dq == 1:
             is_data_saver = False
         elif dq == 2:
@@ -140,7 +142,8 @@ def get_user_inputs(args: list | None):
         timeout = int(args[to_switch_index + 1])
         print(f": {timeout}")
     else:
-        timeout = int(input(f": "))
+        timeout_input = input(f": ")
+        timeout = int(timeout_input) if timeout_input else 60
     print()
     return is_audio_only, is_data_saver, timeout
 
