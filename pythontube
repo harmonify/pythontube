@@ -156,9 +156,10 @@ def get_user_inputs(args: list | None):
             should_append_timestamp = True
         else:
             sat_input = input(
-                "\nEnter if it should append the timestamp on the filename or not (y/N) (default is y): ").lower()
+                "\nEnter if it should append the timestamp on the filename or not (y/N) (default is y): ") or 'y'
+            sat_input = sat_input.lower()
 
-            if sat_input != 'y' or sat_input != 'n':
+            if sat_input != 'y' and sat_input != 'n':
                 print("Invalid input\n")
                 continue
 
@@ -192,6 +193,7 @@ def get_on_progress_callback(stream_file_size: int):
         progress_bar = f"[{'█' * int(rounded_progress / 5):<20s}] {rounded_progress}%"
         print(f"\rProgress: {progress_bar}", end="")
         sys.stdout.flush()
+        print()
     return on_progress
 
 

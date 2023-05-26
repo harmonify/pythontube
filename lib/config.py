@@ -34,7 +34,7 @@ class Config:
         self.file_path = os.path.join(
             self.__location__, self.file_name).removesuffix(".json") + ".json"
 
-        if self.data is None:
+        if getattr(self, 'data', None) is None:
             self.data = self.read_config()
 
     def __repr__(self) -> str:
