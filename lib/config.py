@@ -1,8 +1,12 @@
 from __future__ import annotations
+
 import json
 import os
 
+from .decorator import singleton
 
+
+@singleton
 class Config:
     """
     The config class for pythontube.
@@ -22,12 +26,16 @@ class Config:
     def __init__(self, file_name: str = "pythontube") -> None:
         self.__location__ = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__), '..'))
+
         self.file_name = file_name
+
         # file_path: the path of the config file (defaulting to pythontube.json
         # in the project root directory)
         self.file_path = os.path.join(
             self.__location__, self.file_name).removesuffix(".json") + ".json"
-        self.data = self.read_config()
+
+        if self.data is None:
+            self.data = self.read_config()
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} name={self.file_name}>"

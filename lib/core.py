@@ -14,7 +14,7 @@ from .utils import split_file_extension
 def get_video_stream(streams: StreamQuery, is_data_saver: bool) -> Stream:
     # Using Filters on the myVideoStream Object
     if is_data_saver:
-        options: List[Stream] = [
+        options: List[StreamQuery] = [
             streams.filter(file_extension="mp4",
                            resolution="720p", fps=60, abr="128kbps"),
             streams.filter(file_extension="mp4",
@@ -24,7 +24,7 @@ def get_video_stream(streams: StreamQuery, is_data_saver: bool) -> Stream:
             streams.filter(file_extension="mp4"),
         ]
         for option in options:
-            mp4_stream = option
+            mp4_stream = option.first()
             if mp4_stream:
                 break
     else:

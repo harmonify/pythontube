@@ -1,3 +1,4 @@
-from .core import *
-from .utils import *
 from .config import Config
+from .core import *
+from .decorator import *
+from .utils import *

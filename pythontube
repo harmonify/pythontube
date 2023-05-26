@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, List
 
 import lib
-from pytube import YouTube
+from pytube import Playlist, YouTube
+from pytube.exceptions import RegexMatchError
 
 
 def main(args: list | None = None):
@@ -33,11 +34,8 @@ def main(args: list | None = None):
     this script is working as of 26/05/2023
     """
     try:
-        # prompt user for video url
         while True:
             if len(args) >= 1:
-                if args[0].startswith("-"):
-                    raise Exception("Invalid input")
                 url = args[0]
                 break
             else:
@@ -45,41 +43,44 @@ def main(args: list | None = None):
                 if url != "":
                     break
 
-        # needs to connect to your logged in Youtube Account
-        yt_video = YouTube(url)
-        print(yt_video.check_availability())
-        # yt_video.bypass_age_gate()
+        youtubes: List[YouTube] = []
+        try:
+            yt = YouTube(url)
+            # yt.bypass_age_gate()
+            print_yt_video_info(yt)
+            youtubes.append(yt)
+        except RegexMatchError:
+            # Create a Playlist object
+            playlist = Playlist(url)
 
-        print_yt_video_info(yt_video)
+            # Extract all video URLs from the playlist
+            video_urls = playlist.video_urls
 
-        is_audio_only, is_data_saver, timeout = get_user_inputs(args)
+            for url in video_urls:
+                yt = YouTube(url)
+                youtubes.append(yt)
+        except:
+            print('Invalid link input')
+            exit()
 
-        stream = lib.core.get_audio_only_stream(yt_video.streams, is_data_saver) if is_audio_only else lib.core.get_video_stream(
-            yt_video.streams, is_data_saver)
+        user_inputs = get_user_inputs(args)
 
-        if stream:
-            print(f"Stream metadata: {stream}\n")
-            yt_video.register_on_progress_callback(
-                get_on_progress_callback(stream.filesize))
-            yt_video.register_on_complete_callback(on_complete)
-            file_path = lib.core.download_stream(
-                stream, lib.config.Config("pythontube"), timeout)
-            if file_path and is_audio_only:
-                lib.core.convert_mp4_to_mp3(file_path)
+        for youtube in youtubes:
+            handle_youtube_video(youtube, *user_inputs)
     except KeyboardInterrupt:
         print("\n@@@ Exiting...")
         exit()
 
 
-def print_yt_video_info(yt_video: YouTube):
-    publish_date = datetime.strftime(yt_video.publish_date, '%b %d, %Y')
-    video_length = lib.utils.format_second(yt_video.length)
+def print_yt_video_info(youtube: YouTube):
+    publish_date = datetime.strftime(youtube.publish_date, '%b %d, %Y')
+    video_length = lib.utils.format_second(youtube.length)
 
     print("\n============================================================\n")
-    print(f"  {yt_video.title}")
-    print(f"  {yt_video.author}\n")
+    print(f"  {youtube.title}")
+    print(f"  {youtube.author}\n")
     print(
-        f"  {yt_video.views} views - {publish_date}")
+        f"  {youtube.views} views - {publish_date}")
     print(f"  {video_length}")
     print("\n============================================================\n")
 
@@ -121,7 +122,7 @@ def get_user_inputs(args: list | None):
             print(f": {dq}")
         else:
             dq_input = input(": ")
-            dq = int(dq_input) if dq_input else 60
+            dq = int(dq_input) if dq_input else 1
         if dq == 1:
             is_data_saver = False
         elif dq == 2:
@@ -148,6 +149,22 @@ def get_user_inputs(args: list | None):
     print()
     return is_audio_only, is_data_saver, timeout
 
+
+def handle_youtube_video(youtube: YouTube, is_audio_only: bool, is_data_saver: bool, timeout: int):
+    stream = lib.core.get_audio_only_stream(youtube.streams, is_data_saver) if is_audio_only else lib.core.get_video_stream(
+        youtube.streams, is_data_saver)
+
+    if stream:
+        print(f"Stream metadata: {stream}\n")
+
+        youtube.register_on_progress_callback(
+            get_on_progress_callback(stream.filesize))
+        youtube.register_on_complete_callback(on_complete)
+
+        file_path = lib.core.download_stream(
+            stream, lib.config.Config("pythontube"), timeout)
+        if file_path and is_audio_only:
+            lib.core.convert_mp4_to_mp3(file_path)
 
 def get_on_progress_callback(stream_file_size: int):
     def on_progress(stream: Any, chunk: bytes, bytes_remaining: int):
