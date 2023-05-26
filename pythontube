@@ -147,10 +147,28 @@ def get_user_inputs(args: list | None):
         timeout_input = input(f": ")
         timeout = int(timeout_input) if timeout_input else 60
     print()
-    return is_audio_only, is_data_saver, timeout
+
+    # get if it should append timestamp on the filename
+    while True:
+        if "--no-timestamp" in args:
+            should_append_timestamp = True
+        elif "-y" in args:
+            should_append_timestamp = True
+        else:
+            sat_input = input(
+                "\nEnter if it should append the timestamp on the filename or not (y/N) (default is y): ").lower()
+
+            if sat_input != 'y' or sat_input != 'n':
+                print("Invalid input\n")
+                continue
+
+            should_append_timestamp = sat_input == 'y'
+        break
+
+    return is_audio_only, is_data_saver, timeout, should_append_timestamp
 
 
-def handle_youtube_video(youtube: YouTube, is_audio_only: bool, is_data_saver: bool, timeout: int):
+def handle_youtube_video(youtube: YouTube, is_audio_only: bool, is_data_saver: bool, timeout: int, should_append_timestamp: bool):
     stream = lib.core.get_audio_only_stream(youtube.streams, is_data_saver) if is_audio_only else lib.core.get_video_stream(
         youtube.streams, is_data_saver)
 
@@ -162,9 +180,10 @@ def handle_youtube_video(youtube: YouTube, is_audio_only: bool, is_data_saver: b
         youtube.register_on_complete_callback(on_complete)
 
         file_path = lib.core.download_stream(
-            stream, lib.config.Config("pythontube"), timeout)
+            stream, lib.config.Config("pythontube"), timeout, should_append_timestamp)
         if file_path and is_audio_only:
             lib.core.convert_mp4_to_mp3(file_path)
+
 
 def get_on_progress_callback(stream_file_size: int):
     def on_progress(stream: Any, chunk: bytes, bytes_remaining: int):
