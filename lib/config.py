@@ -9,7 +9,7 @@ class Config:
 
     Attributes:
     - name: the config file name (default: pythontube)
-    - __location__: the path of the config script
+    - __location__: the root path of the project
     - file_path: the config file path (defaulting to `name` attribute in the
                  project root directory)
     - data: the data of the config file
@@ -21,7 +21,7 @@ class Config:
 
     def __init__(self, file_name: str = "pythontube") -> None:
         self.__location__ = os.path.realpath(
-            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+            os.path.join(os.getcwd(), os.path.dirname(__file__), '..'))
         self.file_name = file_name
         # file_path: the path of the config file (defaulting to pythontube.json
         # in the project root directory)

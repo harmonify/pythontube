@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any
 
 import lib
-from config import Config
 from pytube import YouTube
 
 
@@ -48,6 +47,7 @@ def main(args: list | None = None):
 
         # needs to connect to your logged in Youtube Account
         yt_video = YouTube(url)
+        print(yt_video.check_availability())
         # yt_video.bypass_age_gate()
 
         print_yt_video_info(yt_video)
@@ -63,7 +63,7 @@ def main(args: list | None = None):
                 get_on_progress_callback(stream.filesize))
             yt_video.register_on_complete_callback(on_complete)
             file_path = lib.core.download_stream(
-                stream, Config("pythontube"), timeout)
+                stream, lib.config.Config("pythontube"), timeout)
             if file_path and is_audio_only:
                 lib.core.convert_mp4_to_mp3(file_path)
     except KeyboardInterrupt:
