@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 from __future__ import annotations
-import datetime
-import os
-from typing import List
-from pytube import YouTube, StreamQuery, Stream
-from moviepy.editor import AudioFileClip
+
+from datetime import datetime
+from typing import Any
+
+import lib
 from config import Config
+from pytube import YouTube
 
 
 def main(args: list | None = None):
@@ -26,14 +27,11 @@ def main(args: list | None = None):
 
     #### Examples
 
-    `pythontube https://www.youtube.com/watch?v=Kp7eSUU9oy8 -y`
+    `pythontube https://www.youtube.com/watch?v=Kp7eSUU9oy8 -y` # default arguments
     `pythontube https://www.youtube.com/watch?v=Kp7eSUU9oy8 --data-saver --audio-only --timeout 8`
 
-    ### Pytube v12 problem solution
-    https://stackoverflow.com/questions/68945080/pytube-exceptions-regexmatcherror-get-throttling-function-name-could-not-find
-
     ### Note
-    this script is working as of 23/04/2022
+    this script is working as of 26/05/2023
     """
     try:
         # prompt user for video url
@@ -48,38 +46,41 @@ def main(args: list | None = None):
                 if url != "":
                     break
 
+        # needs to connect to your logged in Youtube Account
         yt_video = YouTube(url)
-        yt_video.bypass_age_gate()
+        # yt_video.bypass_age_gate()
 
         print_yt_video_info(yt_video)
 
         is_audio_only, is_data_saver, timeout = get_user_inputs(args)
 
-        # more yt_video setup
-        yt_video.register_on_progress_callback(on_progress)
-        yt_video.register_on_complete_callback(on_complete)
-        # get streams - StreamQuery Object
-        streams = yt_video.streams
+        stream = lib.core.get_audio_only_stream(yt_video.streams, is_data_saver) if is_audio_only else lib.core.get_video_stream(
+            yt_video.streams, is_data_saver)
 
-        # initialize Config object
-        config = Config("pythontube")
-
-        if is_audio_only:
-            download_audio_only(streams, config, is_data_saver, timeout)
-        else:
-            download_video(streams, config, is_data_saver, timeout)
+        if stream:
+            print(f"Stream metadata: {stream}\n")
+            yt_video.register_on_progress_callback(
+                get_on_progress_callback(stream.filesize))
+            yt_video.register_on_complete_callback(on_complete)
+            file_path = lib.core.download_stream(
+                stream, Config("pythontube"), timeout)
+            if file_path and is_audio_only:
+                lib.core.convert_mp4_to_mp3(file_path)
     except KeyboardInterrupt:
-        print("\nExiting...")
+        print("\n@@@ Exiting...")
         exit()
 
 
 def print_yt_video_info(yt_video: YouTube):
+    publish_date = datetime.strftime(yt_video.publish_date, '%b %d, %Y')
+    video_length = lib.utils.format_second(yt_video.length)
+
     print("\n============================================================\n")
     print(f"  {yt_video.title}")
     print(f"  {yt_video.author}\n")
     print(
-        f"  {yt_video.views} views - {datetime.datetime.strftime(yt_video.publish_date, '%b %d, %Y')}")
-    print(f"  {yt_video.length // 60}:{yt_video.length % 60:02d}")
+        f"  {yt_video.views} views - {publish_date}")
+    print(f"  {video_length}")
     print("\n============================================================\n")
 
 
@@ -148,88 +149,19 @@ def get_user_inputs(args: list | None):
     return is_audio_only, is_data_saver, timeout
 
 
-# Core functions
-def download_video(streams: StreamQuery, config: Config, data_saver: bool, timeout: int):
-    # Using Filters on the myVideoStream Object
-    if data_saver:
-        options: List[Stream] = [
-            streams.filter(file_extension="mp4",
-                           resolution="720p", fps=60, abr="128kbps"),
-            streams.filter(file_extension="mp4",
-                           resolution="720p", abr="128kbps"),
-            streams.filter(file_extension="mp4", resolution="720p"),
-            streams.filter(file_extension="mp4", abr="128kbps"),
-            streams.filter(file_extension="mp4"),
-        ]
-        for option in options:
-            mp4_stream = option
-            if mp4_stream:
-                break
-    else:
-        mp4_stream = streams.get_highest_resolution()
-    _download_stream(mp4_stream, config, timeout)
-
-
-def download_audio_only(streams: StreamQuery, config: Config, data_saver: bool, timeout: int):
-    # Filtering only audio streams
-    if data_saver:
-        audio_stream = (streams.filter(only_audio=True, abr="128kbps")
-                        or streams.filter(only_audio=True)).first()
-    else:
-        audio_stream = streams.get_audio_only()
-    file_path = _download_stream(audio_stream, config, timeout)
-    convert_mp4_to_mp3(file_path)
-
-
-def _download_stream(stream: Stream, config: Config, timeout: int):
-    print("\nDownloading stream...\n")
-    print(f"{stream}\n")
-    # create file name
-    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    file_path, file_ext = split_file_path_from_ext(stream.default_filename)
-    file_path = f"{file_path}_{timestamp}.{file_ext}"
-    # download
-    return stream.download(config.data["output_dir_path"],
-                           filename=file_path,
-                           timeout=timeout)
-
-
-# Callbacks
-def on_progress(stream, chunk, bytes_remaining):
-    # print(f"\rDownloading: {bytes_remaining} bytes remaining", end="")
-    print(f"Downloading: {bytes_remaining} bytes remaining")
+def get_on_progress_callback(stream_file_size: int):
+    def on_progress(stream: Any, chunk: bytes, bytes_remaining: int):
+        progress_percentage = 100 - (bytes_remaining / stream_file_size) * 100
+        rounded_progress = round(progress_percentage, 2)
+        progress_bar = f"[{'█' * int(rounded_progress / 5):<20s}] {rounded_progress}%"
+        print(f"\rProgress: {progress_bar}", end="")
+        sys.stdout.flush()
+    return on_progress
 
 
 def on_complete(stream, file_path):
-    print("\n\n============================================================\n")
-    print("Download complete!\n")
+    print("@@@ Download complete!\n")
     print(f"File saved to: {file_path}")
-    print("\n============================================================\n")
-
-
-# Utilities
-def split_file_path_from_ext(file_path):
-    file_path_ext = file_path.split(".")
-    file_path, file_ext = ".".join(file_path_ext[:-1]), file_path_ext[-1]
-    return file_path, file_ext
-
-
-def convert_mp4_to_mp3(file_path):
-    AUDIO_FILE_EXT = "mp3"
-    audio_file_clip = AudioFileClip(file_path)
-
-    video_file_path, video_file_ext = split_file_path_from_ext(file_path)
-    audio_file_path = f"{video_file_path}.{AUDIO_FILE_EXT}"
-
-    audio_file_clip.write_audiofile(audio_file_path)
-    audio_file_clip.close()
-
-    os.remove(file_path)
-
-    print("\n============================================================\n")
-    print("Converted mp4 to mp3\n")
-    print(f"File saved to: {file_path}")
-    print("\n============================================================\n")
 
 
 if __name__ == '__main__':
