@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import traceback
 from datetime import datetime
 from typing import Any, List
 
 import lib
-from pytube import Playlist, YouTube
+from pytube import Playlist, YouTube, Channel
 from pytube.exceptions import RegexMatchError
 
 
@@ -44,28 +45,46 @@ def main(args: list | None = None):
                     break
 
         youtubes: List[YouTube] = []
+
         try:
-            yt = YouTube(url)
-            # yt.bypass_age_gate()
-            print_yt_video_info(yt)
-            youtubes.append(yt)
+            if len(youtubes) == 0:
+                channel = Channel(url)
+                for url in channel.video_urls:
+                    yt = YouTube(url)
+                    yt.check_availability()
+                    youtubes.append(yt)
         except RegexMatchError:
-            # Create a Playlist object
-            playlist = Playlist(url)
+            print('@@@ Not a valid channel URL')
+            pass
 
-            # Extract all video URLs from the playlist
-            video_urls = playlist.video_urls
+        try:
+            if len(youtubes) == 0:
+                playlist = Playlist(url)
+                for url in playlist.video_urls:
+                    yt = YouTube(url)
+                    yt.check_availability()
+                    youtubes.append(yt)
+        except RegexMatchError:
+            print('@@@ Not a valid playlist URL')
+            pass
 
-            for url in video_urls:
+        try:
+            if len(youtubes) == 0:
                 yt = YouTube(url)
+                yt.check_availability()
                 youtubes.append(yt)
-        except:
-            print('Invalid link input')
-            exit()
+        except RegexMatchError:
+            print('@@@ Not a valid video URL')
+            pass
+
+        if len(youtubes) == 0:
+            print('@@@ Invalid link input')
+            exit(1)
 
         user_inputs = get_user_inputs(args)
 
         for youtube in youtubes:
+            print_yt_video_info(youtube)
             handle_youtube_video(youtube, *user_inputs)
     except KeyboardInterrupt:
         print("\n@@@ Exiting...")
@@ -193,12 +212,11 @@ def get_on_progress_callback(stream_file_size: int):
         progress_bar = f"[{'█' * int(rounded_progress / 5):<20s}] {rounded_progress}%"
         print(f"\rProgress: {progress_bar}", end="")
         sys.stdout.flush()
-        print()
     return on_progress
 
 
 def on_complete(stream, file_path):
-    print("@@@ Download complete!\n")
+    print("\n@@@ Download complete!\n")
     print(f"File saved to: {file_path}")
 
 
