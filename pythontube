@@ -48,14 +48,11 @@ def main(args: list | None = None):
 
         try:
             if len(youtubes) == 0:
-                channel = Channel(url)
-                for url in channel.video_urls:
-                    yt = YouTube(url)
-                    yt.check_availability()
-                    youtubes.append(yt)
+                yt = YouTube(url)
+                yt.check_availability()
+                youtubes.append(yt)
         except RegexMatchError:
-            print('@@@ Not a valid channel URL')
-            pass
+            print('@@@ Not a valid video URL')
 
         try:
             if len(youtubes) == 0:
@@ -66,20 +63,22 @@ def main(args: list | None = None):
                     youtubes.append(yt)
         except RegexMatchError:
             print('@@@ Not a valid playlist URL')
-            pass
 
         try:
             if len(youtubes) == 0:
-                yt = YouTube(url)
-                yt.check_availability()
-                youtubes.append(yt)
+                channel = Channel(url)
+                for url in channel.video_urls:
+                    yt = YouTube(url)
+                    yt.check_availability()
+                    youtubes.append(yt)
         except RegexMatchError:
-            print('@@@ Not a valid video URL')
-            pass
+            print('@@@ Not a valid channel URL')
 
         if len(youtubes) == 0:
             print('@@@ Invalid link input')
             exit(1)
+
+        print(f'@@@ Total videos: {len(youtubes)}')
 
         user_inputs = get_user_inputs(args)
 
@@ -89,6 +88,8 @@ def main(args: list | None = None):
     except KeyboardInterrupt:
         print("\n@@@ Exiting...")
         exit()
+    except Exception:
+        traceback.format_exc()
 
 
 def print_yt_video_info(youtube: YouTube):
